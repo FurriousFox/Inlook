@@ -7,8 +7,8 @@ import { INetworkModule } from "npm:@azure/msal-common";
 import * as msal from "npm:@azure/msal-node";
 import puppeteer from "npm:puppeteer";
 
-process.on("uncaughtException", e => console.log(e));
-process.on("unhandledRejection", e => console.log(e));
+process.on("uncaughtException", e => console.log("uncaughtException", e));
+process.on("unhandledRejection", e => console.log("unhandledRejection", e));
 
 const CLIENT_ID = "9199bf20-a13f-4107-85dc-02114787ef48"; // One Outlook Web (OWA)
 
@@ -16,7 +16,7 @@ if (!fs.existsSync(path.dirname(`${import.meta.dirname}/../state/`))) fs.mkdirSy
 const MSAL_CREDS = `${import.meta.dirname}/../state/msal_creds.json`;
 
 const scopes = [
-    "https://outlook.office365.com/.default",
+    "https://outlook.office.com/.default",
     "profile",
     "offline_access",
     "openid",
@@ -38,7 +38,7 @@ const pca = new msal.PublicClientApplication({
     system: { networkClient: outlookOriginClient }
 });
 
-export async function getToken(forceInteractive = false, silent = false) {
+export async function getToken(forceInteractive = false, silent = false, tryHeadless = false, returnUrl = false, customMsalUrl: undefined | string = undefined) {
     let interactive = true;
 
     try {
@@ -63,39 +63,65 @@ export async function getToken(forceInteractive = false, silent = false) {
         const code_url: Promise<string> = new Promise((resolve, reject) => (async (resolve, reject) => {
             let a = false;
             let b = false;
-            const msal_url = await pca.getAuthCodeUrl({
+            const msal_url = customMsalUrl ? customMsalUrl : await pca.getAuthCodeUrl({
                 scopes: scopes,
                 redirectUri: "https://outlook.office.com/mail/",
                 codeChallenge: codeChallenge,
                 codeChallengeMethod: "S256"
             });
 
-            const browser = await puppeteer.launch({
+            let f = false;
+            let g: number | undefined;
+            const browser = await puppeteer.launch(tryHeadless ? {
+                headless: true,
+                userDataDir: `${import.meta.dirname}/../state/puppeteerUserData`
+            } : {
                 headless: false,
                 userDataDir: `${import.meta.dirname}/../state/puppeteerUserData`,
                 defaultViewport: null
             });
+            if (tryHeadless) {
+                if (!silent) console.log("Trying to obtain token semi-interactively (headless), waiting up to 10 seconds...");
+                g = setTimeout(async () => {
+                    if (f) return; else f = true;
+                    if (!silent) console.log("Failed to headlessly obtain token, user interaction required.");
+
+                    browser.close();
+                    resolve(await getToken(true, undefined, false, true, msal_url));
+                }, 10000);
+
+            }
+
             process.on("SIGINT", () => {
                 browser.close();
+                f = true;
                 reject("received SIGINT");
             });
             browser.on("disconnected", () => {
-                if (!a) reject("browser closed");
+                if (!a && !f) {
+                    f = true;
+                    reject("browser closed");
+                }
             });
 
             const pageobject: { page?: puppeteer.Page; } = {};
             if ((await browser.pages()).length) {
-                (pageobject.page = (await browser.pages())[0]).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
+                // (pageobject.page = (await browser.pages())[0]).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
+                (pageobject.page = (await browser.pages())[0]).goto(msal_url);
             } else {
-                (pageobject.page = await browser.newPage()).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
+                // (pageobject.page = await browser.newPage()).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
+                (pageobject.page = await browser.newPage()).goto(msal_url);
             }
+            pageobject.page.bringToFront();
 
             function registerFramenavigated(pageobject: { page: puppeteer.Page; }) {
                 pageobject.page.on("framenavigated", async (frame) => {
                     const url = frame.url();
                     // console.log(url);
-                    if (url.match(/https:\/\/login\.microsoftonline\.com\/.+\/login/)) {
-                        pageobject.page.evaluate(`{ const rememberYes = setInterval(()=>{ if (document.querySelector(".button_primary") && document.querySelector("meta[name=PageID]").content == 'KmsiInterrupt') { clearInterval(rememberYes); document.querySelector(".button_primary").click(); } }, 100) }`);
+                    if (url.match(/https:\/\/login\.microsoftonline\.com\/.+\/.+/)) {
+                        pageobject.page.evaluate(`{ const rememberYes = setInterval(()=>{ if (document.querySelector(".button_primary") && document.querySelector("meta[name=PageID]").content == 'KmsiInterrupt') { clearInterval(rememberYes); document.querySelector(".button_primary").click(); } }, 100) }`).catch(() => { });;
+                    } else if (url.match(/https:\/\/login\.live\.com\/.+\.srf/)) {
+                        pageobject.page.evaluate(`{ const rememberYes = setInterval(()=>{ if (document.querySelector("button[data-testid=primaryButton]") && !!(document.querySelector("img[data-testid=kmsiImage]")??document.querySelector("div[data-testid=kmsiVideo]"))) { clearInterval(rememberYes); document.querySelector("button[data-testid=primaryButton]").click(); } }, 100) }`).catch(() => { });
                     }
 
                     if (!b && url.startsWith("https://outlook.office365.com/mail/oauthRedirect.html")) {
@@ -109,7 +135,8 @@ export async function getToken(forceInteractive = false, silent = false) {
                     } else if (url.match(/https?:\/\/outlook\.office\.com\/mail\/?\?.*code=.+/) && !a) {
                         a = true;
                         browser.close();
-                        // console.log(url);
+                        f = true;
+                        if (g) clearTimeout(g);
                         resolve(url);
                     }
                 });
@@ -117,6 +144,8 @@ export async function getToken(forceInteractive = false, silent = false) {
 
             registerFramenavigated(pageobject as { page: puppeteer.Page; });
         })(resolve, reject));
+
+        if (returnUrl) return await code_url;
 
         const code = new URL(await code_url).searchParams.get("code");
         if (!code) throw new Error("Failed to interactively obtain token");
@@ -158,8 +187,8 @@ export async function getToken(forceInteractive = false, silent = false) {
             if (!silent) console.log("Silently obtained access token, expires:", token.expiresOn);
             return token.accessToken;
         } catch (_err) {
-            console.log(/* _err, "\n */"Failed to silently obtain token, user interaction required.");
-            return await getToken(true);
+            console.log(/* _err, "\n */"Failed to silently obtain token, trying headless browser.");
+            return await getToken(true, undefined, true);
         }
     }
 }
