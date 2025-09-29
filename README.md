@@ -30,6 +30,8 @@ deno -A index.ts
   - The default username is "test" and password is "test", this shouldn't be a huge security issue as Inlook only listens at localhost by default, but please change this.
   - Once you're done filling these fields, press the "Advanced config" button at the bottom, this confirms the manual configuration.
 
+or [watch this handy-dandy video tutorial](https://raw.githubusercontent.com/FurriousFox/Inlook/refs/heads/main/video.mp4)
+
 ## IMAP Server
 
 Since there was no usable IMAP server implementation for NodeJS yet, I wrote my own IMAP server in node ([GitHub](https://github.com/FurriousFox/node-imap-server), [NPM](https://www.npmjs.com/package/node-imap-server))
