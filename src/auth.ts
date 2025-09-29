@@ -96,6 +96,8 @@ export async function getToken(forceInteractive = false, silent = false, tryHead
                 browser.close();
                 f = true;
                 reject("received SIGINT");
+
+                process.exit();
             });
             browser.on("disconnected", () => {
                 if (!a && !f) {

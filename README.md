@@ -1,19 +1,20 @@
 # Inlook
 
-Outlook sucks, so this is a tool to use your own e-mail client, even if your organisation doesn't allow 3rd party email clients, allowing you to imitate different apps and offering multiple ways to integrate with your own mail client.
-
-Only requirement is being able to use outlook.office.com (which I assume you do, cuz what emails would you else want to read ig).
+Outlook sucks, so this is a tool to use your own e-mail client, even if your organisation doesn't allow 3rd party email clients.
 
 Imitates Outlook Web (OWA) and uses the Outlook REST API to create a bridge via IMAP and SMTP
 
-## Current state
+## Important notes
 
-SMTP bridge will be added in a future release, reading emails should be fully functional.
+- **Inlook currently only works well with Thunderbird Desktop, it doesn't play nicely with other clients yet!**
+- SMTP bridge will be added in a future release, reading emails should be fully functional.
+- Inlook functions slower on personal accounts compared to educational/organisational accounts due to different rate limits
 
-**Inlook is currently only tested on Thunderbird for desktop, it doesn't play nicely with other clients yet!**
-Improving compatibility will be first priority, after that performance and improving functionality (e.g. timely notifications, renaming folders).
+Improving compatibility will be first priority, after that performance and improving functionality (e.g. timely notifications, renaming folders, outgoing mail).
 
 ## Running it
+
+- [install Deno](https://docs.deno.com/runtime/getting_started/installation/) if you haven't yet
 
 ```bash
 git clone https://github.com/FurriousFox/Inlook.git
@@ -21,6 +22,13 @@ cd Inlook
 deno install --allow-scripts=npm:puppeteer
 deno -A index.ts
 ```
+
+- [download and install](https://www.thunderbird.net/en-US/thunderbird/all/#download-os-select) Thunderbird if you haven't yet
+
+- setup thunderbird to use your local Inlook server
+![thunderbird email setup screen](thunderbird.png)
+  - The default username is "test" and password is "test", this shouldn't be a huge security issue as Inlook only listens at localhost by default, but please change this.
+  - Once you're done filling these fields, press the "Advanced config" button at the bottom, this confirms the manual configuration.
 
 ## IMAP Server
 
