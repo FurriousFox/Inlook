@@ -2,5 +2,8 @@
   "tasks": {
     "dev": "deno -A --watch src/imap.ts"
   },
-  "nodeModulesDir": "auto"
+  "nodeModulesDir": "auto",
+  "imports": {
+    "node-imap-server": "npm:node-imap-server@^1.0.2"
+  }
 }

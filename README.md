@@ -6,10 +6,19 @@ Only requirement is being able to use outlook.office.com (which I assume you do,
 
 Imitates Outlook Web (OWA) and uses the Outlook REST API to create a bridge via IMAP and SMTP
 
+## Current state
+
+SMTP bridge will be added in a future release, reading emails should be fully functional.
+
+**Inlook is currently only tested on Thunderbird for desktop, it doesn't play nicely with other clients yet!**
+Improving compatibility will be first priority, after that performance and improving functionality (e.g. timely notifications, renaming folders).
+
 ## Running it
 
 ```bash
-deno install --allow-scripts=npm:puppeteer@24.16.2
+git clone https://github.com/FurriousFox/Inlook.git
+cd Inlook
+deno install --allow-scripts=npm:puppeteer
 deno -A index.ts
 ```
 
