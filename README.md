@@ -16,17 +16,17 @@ Improving compatibility will be first priority, after that performance and impro
 
 - [install Deno](https://docs.deno.com/runtime/getting_started/installation/) if you haven't yet
 
-```bash
-git clone https://github.com/FurriousFox/Inlook.git
-cd Inlook
-deno install --allow-scripts=npm:puppeteer
-deno -A index.ts
+```bash  
+git clone https://github.com/FurriousFox/Inlook.git  
+cd Inlook  
+deno install --allow-scripts=npm:puppeteer  
+deno -A index.ts  
 ```
 
 - [download and install](https://www.thunderbird.net/en-US/thunderbird/all/#download-os-select) Thunderbird if you haven't yet
 
 - setup thunderbird to use your local Inlook server
-![thunderbird email setup screen](thunderbird.png)
+![thunderbird email setup screen](https://raw.githubusercontent.com/FurriousFox/Inlook/refs/heads/main/thunderbird.png)
   - The default username is "test" and password is "test", this shouldn't be a huge security issue as Inlook only listens at localhost by default, but please change this.
   - Once you're done filling these fields, press the "Advanced config" button at the bottom, this confirms the manual configuration.
 
