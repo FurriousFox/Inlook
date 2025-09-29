@@ -4,6 +4,9 @@
   },
   "nodeModulesDir": "auto",
   "imports": {
-    "node-imap-server": "npm:node-imap-server@^1.0.2"
+    "node-imap-server": "npm:node-imap-server@^1.0.2",
+    "puppeteer": "npm:puppeteer",
+    "@azure/msal-node": "npm:@azure/msal-node",
+    "@azure/msal-common": "npm:@azure/msal-common"
   }
 }

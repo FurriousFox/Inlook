@@ -72,47 +72,66 @@ export async function getToken(forceInteractive = false, silent = false, tryHead
 
             let f = false;
             let g: number | undefined;
-            const browser = await puppeteer.launch(tryHeadless ? {
-                headless: true,
-                userDataDir: `${import.meta.dirname}/../state/puppeteerUserData`
-            } : {
-                headless: false,
-                userDataDir: `${import.meta.dirname}/../state/puppeteerUserData`,
-                defaultViewport: null
-            });
+            const browser_obj = {
+                browser: await puppeteer.launch(tryHeadless ? {
+                    headless: true,
+                    userDataDir: `${import.meta.dirname}/../state/puppeteerUserData`
+                } : {
+                    headless: false,
+                    userDataDir: `${import.meta.dirname}/../state/puppeteerUserData`,
+                    defaultViewport: null,
+                })
+            };
+            const browserWsEndpoint = browser_obj.browser.wsEndpoint();
+
             if (tryHeadless) {
                 if (!silent) console.log("Trying to obtain token semi-interactively (headless), waiting up to 10 seconds...");
                 g = setTimeout(async () => {
                     if (f) return; else f = true;
                     if (!silent) console.log("Failed to headlessly obtain token, user interaction required.");
 
-                    browser.close();
+                    browser_obj.browser.close();
                     resolve(await getToken(true, undefined, false, true, msal_url));
                 }, 10000);
 
             }
 
+            // setTimeout(() => browser_obj.browser.disconnect(), 1000);
+
             process.on("SIGINT", () => {
-                browser.close();
+                browser_obj.browser.close();
                 f = true;
                 reject("received SIGINT");
 
                 process.exit();
             });
-            browser.on("disconnected", () => {
-                if (!a && !f) {
-                    f = true;
-                    reject("browser closed");
+            browser_obj.browser.on("disconnected", async () => {
+                const new_browser = await puppeteer.connect({ browserWSEndpoint: browserWsEndpoint, defaultViewport: null }).catch(() => {
+                    if (!a && !f) {
+                        f = true;
+                        reject("browser closed");
+                    }
+                });
+                if (new_browser) {
+                    browser_obj.browser = new_browser;
+                    (pageobject.page = (await browser_obj.browser.pages())[0]);
+                    registerFramenavigated(pageobject as { page: puppeteer.Page; });
+                    // console.log("recovered closed browser");
+                } else {
+                    if (!a && !f) {
+                        f = true;
+                        reject("browser closed");
+                    }
                 }
             });
 
             const pageobject: { page?: puppeteer.Page; } = {};
-            if ((await browser.pages()).length) {
-                // (pageobject.page = (await browser.pages())[0]).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
-                (pageobject.page = (await browser.pages())[0]).goto(msal_url);
+            if ((await browser_obj.browser.pages()).length) {
+                // (pageobject.page = (await browser_obj.browser.pages())[0]).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
+                (pageobject.page = (await browser_obj.browser.pages())[0]).goto(msal_url);
             } else {
-                // (pageobject.page = await browser.newPage()).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
-                (pageobject.page = await browser.newPage()).goto(msal_url);
+                // (pageobject.page = await browser_obj.browser.newPage()).goto("https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https://outlook.office.com/.default openid profile offline_access&redirect_uri=https://outlook.office365.com/mail/oauthRedirect.html");
+                (pageobject.page = await browser_obj.browser.newPage()).goto(msal_url);
             }
             pageobject.page.bringToFront();
 
@@ -129,14 +148,14 @@ export async function getToken(forceInteractive = false, silent = false, tryHead
                     if (!b && url.startsWith("https://outlook.office365.com/mail/oauthRedirect.html")) {
                         b = true;
                         const oldpage = pageobject.page;
-                        pageobject.page = await browser.newPage();
+                        pageobject.page = await browser_obj.browser.newPage();
                         registerFramenavigated(pageobject);
                         pageobject.page.goto(msal_url);
                         oldpage.close();
                         pageobject.page.bringToFront();
                     } else if (url.match(/https?:\/\/outlook\.office\.com\/mail\/?\?.*code=.+/) && !a) {
                         a = true;
-                        browser.close();
+                        browser_obj.browser.close();
                         f = true;
                         if (g) clearTimeout(g);
                         resolve(url);

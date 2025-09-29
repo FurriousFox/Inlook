@@ -16,11 +16,11 @@ Improving compatibility will be first priority, after that performance and impro
 
 - [install Deno](https://docs.deno.com/runtime/getting_started/installation/) if you haven't yet
 
-```bash  
-git clone https://github.com/FurriousFox/Inlook.git  
-cd Inlook  
-deno install --allow-scripts=npm:puppeteer  
-deno -A index.ts  
+```bash
+git clone https://github.com/FurriousFox/Inlook.git
+cd Inlook
+deno install --allow-scripts=npm:puppeteer
+deno -A index.ts
 ```
 
 - [download and install](https://www.thunderbird.net/en-US/thunderbird/all/#download-os-select) Thunderbird if you haven't yet
